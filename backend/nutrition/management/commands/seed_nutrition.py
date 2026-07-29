@@ -1,0 +1,132 @@
+from django.core.management.base import BaseCommand
+
+from nutrition.models import NutritionItem
+
+
+ITEMS = [
+    {
+        'name': 'boiled egg',
+        'aliases': ['egg', 'eggs'],
+        'dietary_tags': ['vegetarian', 'high-protein'],
+        'preparation_method': 'boiled',
+        'serving_quantity': 1,
+        'serving_unit': 'egg',
+        'calories': 78,
+        'protein_g': 6,
+        'carbs_g': 0.6,
+        'fat_g': 5.3,
+        'source': 'Documented starter KB, USDA-style common reference',
+        'notes': 'Large boiled egg.',
+    },
+    {
+        'name': 'cooked white rice',
+        'aliases': ['rice', 'white rice'],
+        'dietary_tags': ['vegetarian', 'vegan'],
+        'preparation_method': 'cooked',
+        'serving_quantity': 1,
+        'serving_unit': 'cup',
+        'calories': 205,
+        'protein_g': 4.3,
+        'carbs_g': 44.5,
+        'fat_g': 0.4,
+        'source': 'Documented starter KB, USDA-style common reference',
+        'notes': 'Cooked long-grain white rice.',
+    },
+    {
+        'name': 'grilled chicken breast',
+        'aliases': ['chicken', 'chicken breast'],
+        'dietary_tags': ['high-protein'],
+        'preparation_method': 'grilled',
+        'serving_quantity': 100,
+        'serving_unit': 'g',
+        'calories': 165,
+        'protein_g': 31,
+        'carbs_g': 0,
+        'fat_g': 3.6,
+        'source': 'Documented starter KB, USDA-style common reference',
+        'notes': 'Skinless cooked chicken breast.',
+    },
+    {
+        'name': 'fried chicken breast',
+        'aliases': ['fried chicken', 'chicken'],
+        'dietary_tags': ['high-protein'],
+        'preparation_method': 'fried',
+        'serving_quantity': 100,
+        'serving_unit': 'g',
+        'calories': 260,
+        'protein_g': 25,
+        'carbs_g': 8,
+        'fat_g': 14,
+        'source': 'Documented starter KB, preparation-sensitive estimate',
+        'notes': 'Generic fried chicken breast entry for clarification demos.',
+    },
+    {
+        'name': 'rolled oats',
+        'aliases': ['oats', 'oatmeal'],
+        'dietary_tags': ['vegetarian', 'vegan'],
+        'preparation_method': '',
+        'serving_quantity': 0.5,
+        'serving_unit': 'cup',
+        'calories': 150,
+        'protein_g': 5,
+        'carbs_g': 27,
+        'fat_g': 3,
+        'source': 'Documented starter KB, package-style common serving',
+        'notes': 'Dry rolled oats before cooking.',
+    },
+    {
+        'name': 'banana',
+        'aliases': ['banana'],
+        'dietary_tags': ['vegetarian', 'vegan'],
+        'preparation_method': 'raw',
+        'serving_quantity': 1,
+        'serving_unit': 'piece',
+        'calories': 105,
+        'protein_g': 1.3,
+        'carbs_g': 27,
+        'fat_g': 0.4,
+        'source': 'Documented starter KB, USDA-style common reference',
+        'notes': 'Medium banana.',
+    },
+    {
+        'name': 'plain low-fat yogurt',
+        'aliases': ['yogurt', 'curd'],
+        'dietary_tags': ['vegetarian'],
+        'preparation_method': '',
+        'serving_quantity': 1,
+        'serving_unit': 'cup',
+        'calories': 154,
+        'protein_g': 12.9,
+        'carbs_g': 17.2,
+        'fat_g': 3.8,
+        'source': 'Documented starter KB, USDA-style common reference',
+        'notes': 'Plain low-fat yogurt.',
+    },
+    {
+        'name': 'steamed broccoli',
+        'aliases': ['broccoli'],
+        'dietary_tags': ['vegetarian', 'vegan'],
+        'preparation_method': 'steamed',
+        'serving_quantity': 1,
+        'serving_unit': 'cup',
+        'calories': 55,
+        'protein_g': 3.7,
+        'carbs_g': 11.2,
+        'fat_g': 0.6,
+        'source': 'Documented starter KB, USDA-style common reference',
+        'notes': 'Chopped steamed broccoli.',
+    },
+]
+
+
+class Command(BaseCommand):
+    help = 'Seed the documented starter nutrition knowledge base.'
+
+    def handle(self, *args, **options):
+        for item in ITEMS:
+            NutritionItem.objects.update_or_create(
+                name=item['name'],
+                preparation_method=item['preparation_method'],
+                defaults=item,
+            )
+        self.stdout.write(self.style.SUCCESS(f'Seeded {len(ITEMS)} nutrition items.'))
