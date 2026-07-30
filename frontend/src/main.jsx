@@ -49,6 +49,7 @@ function App() {
   const [historyData, setHistoryData] = useState({ meals: [], corrections: [] });
   const [review, setReview] = useState(null);
   const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('success');
   const [loading, setLoading] = useState(false);
   const [mealText, setMealText] = useState('2 boiled eggs, 1 cup cooked rice, grilled chicken 150g');
   const [mealType, setMealType] = useState('lunch');
@@ -80,7 +81,10 @@ function App() {
   }
 
   useEffect(() => {
-    refresh().catch((error) => setMessage(error.message));
+    refresh().catch((error) => {
+      setMessageType('error');
+      setMessage(error.message);
+    });
   }, [activeDate]);
 
   function updateActiveDate(value) {
@@ -88,6 +92,10 @@ function App() {
     const isoDate = toIsoDate(value);
     if (isoDate) {
       setActiveDate(isoDate);
+      setMessage('');
+    } else if (value.length >= 10) {
+      setMessageType('error');
+      setMessage('Use date format DD-MM-YYYY.');
     }
   }
 
@@ -103,9 +111,11 @@ function App() {
         foods_to_avoid: toList(form.get('foods_to_avoid') || ''),
       };
       setProfile(await api('/profile/', { method: 'POST', body: JSON.stringify(payload) }));
+      setMessageType('success');
       setMessage('Profile saved.');
       await refresh();
     } catch (error) {
+      setMessageType('error');
       setMessage(error.message);
     } finally {
       setLoading(false);
@@ -121,8 +131,10 @@ function App() {
         body: JSON.stringify({ description: mealText, date: activeDate, meal_type: mealType }),
       });
       setReview(data);
+      setMessageType(data.requires_clarification ? 'warning' : 'success');
       setMessage(data.requires_clarification ? 'Please review the clarification notes before saving.' : 'Meal extracted from the knowledge base.');
     } catch (error) {
+      setMessageType('error');
       setMessage(error.message);
     } finally {
       setLoading(false);
@@ -144,9 +156,11 @@ function App() {
     try {
       const saved = await api('/meals/save/', { method: 'POST', body: JSON.stringify(review) });
       setReview(null);
+      setMessageType('success');
       setMessage(`Saved meal with ${saved.total_calories} kcal.`);
       await refresh();
     } catch (error) {
+      setMessageType('error');
       setMessage(error.message);
     } finally {
       setLoading(false);
@@ -158,9 +172,11 @@ function App() {
     try {
       const plan = await api('/plans/generate/', { method: 'POST', body: JSON.stringify({}) });
       setPlans((current) => [plan, ...current]);
+      setMessageType('success');
       setMessage('Generated a draft plan for tomorrow.');
       await refresh();
     } catch (error) {
+      setMessageType('error');
       setMessage(error.message);
     } finally {
       setLoading(false);
@@ -172,9 +188,11 @@ function App() {
     try {
       const plan = await api(`/plans/${planId}/${action}/`, { method: 'POST', body: JSON.stringify({}) });
       setPlans((current) => current.map((item) => (item.id === plan.id ? plan : item)));
+      setMessageType('success');
       setMessage(`Plan ${action === 'approve' ? 'approved' : 'rejected'}.`);
       await refresh();
     } catch (error) {
+      setMessageType('error');
       setMessage(error.message);
     } finally {
       setLoading(false);
@@ -206,7 +224,8 @@ function App() {
         General wellness tracking only. This app does not provide medical diagnosis, treatment, or guaranteed health outcomes.
       </p>
 
-      {message && <div className="notice">{message}</div>}
+      {loading && <div className="notice loading-state">Working...</div>}
+      {message && <div className={`notice ${messageType}`}>{message}</div>}
 
       <nav className="tabs" aria-label="Wellness workspace views">
         <button className={activeTab === 'tracker' ? 'active' : ''} onClick={() => setActiveTab('tracker')}>Tracker</button>
@@ -222,7 +241,7 @@ function App() {
                 <form onSubmit={saveProfile} className="form-grid">
                   <label>
                     Calorie target
-                    <input name="calorie_target" type="number" min="1" defaultValue={profile.calorie_target} />
+                    <input name="calorie_target" type="number" min="1" defaultValue={profile.calorie_target} required />
                   </label>
                   <label>
                     Dietary preferences
@@ -256,9 +275,9 @@ function App() {
                 </label>
                 <label>
                   Supported text format
-                  <textarea value={mealText} onChange={(event) => setMealText(event.target.value)} rows="5" />
+                  <textarea value={mealText} onChange={(event) => setMealText(event.target.value)} rows="5" required />
                 </label>
-                <button disabled={loading}>Extract Food Items</button>
+                <button disabled={loading || !mealText.trim()}>{loading ? 'Extracting...' : 'Extract Food Items'}</button>
               </form>
             </section>
 
@@ -342,7 +361,7 @@ function App() {
 
               <div className="review-footer">
                 <span>Total: {Number(review.total_calories || 0).toFixed(0)} kcal</span>
-                <button onClick={saveMeal} disabled={loading}>Save Meal</button>
+                <button onClick={saveMeal} disabled={loading}>{loading ? 'Saving...' : 'Save Meal'}</button>
               </div>
             </section>
           )}
@@ -353,7 +372,7 @@ function App() {
                 <h2>Next-Day Meal Plan</h2>
                 <p>Drafts use saved preferences, allergies, avoided foods, and documented nutrition values.</p>
               </div>
-              <button onClick={generatePlan} disabled={loading}>Generate Plan</button>
+              <button onClick={generatePlan} disabled={loading}>{loading ? 'Generating...' : 'Generate Plan'}</button>
             </div>
 
             <div className="plan-grid">

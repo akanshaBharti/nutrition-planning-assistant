@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from config.workflow_logging import workflow_log
 from .models import Meal, MealItem, UserCorrection
 
 
@@ -65,14 +66,17 @@ class MealSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
+        workflow_log('meal_save_started', item_count=len(items_data), meal_type=validated_data.get('meal_type'))
         meal = Meal.objects.create(**validated_data)
         total = 0
+        correction_count = 0
         for item_data in items_data:
             user_calories = item_data.get('user_calories')
             estimated = item_data.get('estimated_calories') or 0
             meal_item = MealItem.objects.create(meal=meal, **item_data)
             total += user_calories if user_calories is not None else estimated
             if user_calories is not None and user_calories != estimated:
+                correction_count += 1
                 UserCorrection.objects.create(
                     meal_item=meal_item,
                     original_calories=estimated,
@@ -80,4 +84,11 @@ class MealSerializer(serializers.ModelSerializer):
                 )
         meal.total_calories = total
         meal.save(update_fields=['total_calories'])
+        workflow_log(
+            'meal_save_completed',
+            meal_id=meal.id,
+            item_count=len(items_data),
+            correction_count=correction_count,
+            total_calories=meal.total_calories,
+        )
         return meal

@@ -3,6 +3,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.utils import timezone
 
+from config.workflow_logging import workflow_log
 from nutrition.models import NutritionItem
 from profiles.models import UserProfile
 
@@ -57,8 +58,16 @@ def generate_plan():
     profile = UserProfile.current()
     target_date = timezone.localdate() + timedelta(days=1)
     foods = eligible_items(profile)
+    workflow_log(
+        'meal_plan_generation_started',
+        calorie_target=profile.calorie_target,
+        preference_count=len(profile.dietary_preferences),
+        allergy_count=len(profile.allergies),
+        foods_to_avoid_count=len(profile.foods_to_avoid),
+        eligible_food_count=len(foods),
+    )
     if not foods:
-        return {
+        result = {
             'target_date': target_date,
             'status': 'draft',
             'total_calories': Decimal('0'),
@@ -70,6 +79,8 @@ def generate_plan():
             ],
             'items': [],
         }
+        workflow_log('meal_plan_generation_completed', item_count=0, total_calories=result['total_calories'], status='draft')
+        return result
 
     sorted_foods = sorted(foods, key=lambda item: abs(Decimal(item.calories) - Decimal('350')))
     items = []
@@ -95,7 +106,7 @@ def generate_plan():
             'rationale': 'Selected from documented nutrition items while applying saved preferences and restrictions.',
         })
 
-    return {
+    result = {
         'target_date': target_date,
         'status': 'draft',
         'total_calories': _round(total),
@@ -110,3 +121,10 @@ def generate_plan():
         ],
         'items': items,
     }
+    workflow_log(
+        'meal_plan_generation_completed',
+        item_count=len(items),
+        total_calories=result['total_calories'],
+        status='draft',
+    )
+    return result

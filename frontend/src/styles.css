@@ -132,6 +132,24 @@ h2 {
   background: #e9f5f2;
 }
 
+.notice.error {
+  border-color: #e5a59a;
+  color: #763021;
+  background: #fff0ed;
+}
+
+.notice.warning {
+  border-color: #e7b778;
+  color: #62410f;
+  background: #fff8ea;
+}
+
+.loading-state {
+  border-color: #bfd0d7;
+  color: #244653;
+  background: #edf6f9;
+}
+
 .workspace-grid {
   display: grid;
   grid-template-columns: minmax(260px, 0.9fr) minmax(300px, 1.1fr) minmax(300px, 1fr);

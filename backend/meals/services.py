@@ -2,6 +2,7 @@ import re
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
+from config.workflow_logging import workflow_log
 from nutrition.models import NutritionItem
 
 
@@ -145,6 +146,7 @@ def _infer_unit(fragment, item, unit):
 
 
 def extract_meal(description):
+    workflow_log('meal_extract_started', description_length=len(description))
     fragments = [part.strip() for part in re.split(r',|\band\b|\n', description) if part.strip()]
     items = []
     clarification_questions = []
@@ -207,7 +209,7 @@ def extract_meal(description):
         })
 
     total = sum(_decimal(item['estimated_calories']) for item in items)
-    return {
+    result = {
         'requires_clarification': bool(clarification_questions),
         'clarification_questions': clarification_questions[:2],
         'date': date.today().isoformat(),
@@ -218,3 +220,11 @@ def extract_meal(description):
         'uncertainty': 'Some items need clarification or manual correction.' if clarification_questions else '',
         'items': items,
     }
+    workflow_log(
+        'meal_extract_completed',
+        item_count=len(items),
+        requires_clarification=result['requires_clarification'],
+        assumption_count=len(assumptions),
+        total_calories=result['total_calories'],
+    )
+    return result

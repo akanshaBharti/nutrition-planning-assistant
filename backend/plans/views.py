@@ -4,6 +4,7 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from config.workflow_logging import workflow_log
 from .models import MealPlan, MealPlanItem
 from .serializers import MealPlanSerializer
 from .services import generate_plan
@@ -41,6 +42,7 @@ class MealPlanApproveView(APIView):
         plan = get_object_or_404(MealPlan, pk=plan_id)
         plan.status = MealPlan.STATUS_APPROVED
         plan.save(update_fields=['status', 'updated_at'])
+        workflow_log('meal_plan_reviewed', plan_id=plan.id, action='approved', total_calories=plan.total_calories)
         return Response(MealPlanSerializer(plan).data)
 
 
@@ -49,4 +51,5 @@ class MealPlanRejectView(APIView):
         plan = get_object_or_404(MealPlan, pk=plan_id)
         plan.status = MealPlan.STATUS_REJECTED
         plan.save(update_fields=['status', 'updated_at'])
+        workflow_log('meal_plan_reviewed', plan_id=plan.id, action='rejected', total_calories=plan.total_calories)
         return Response(MealPlanSerializer(plan).data)
